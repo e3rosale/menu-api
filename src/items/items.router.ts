@@ -7,6 +7,9 @@
 import express, { Request, Response } from "express";
 import * as ItemService from "./items.service";
 import { BaseItem, Item } from "./item.interface";
+import { checkJwt } from "../middleware/authz.middleware";
+import { checkPermissions } from "../middleware/permissions.middleware";
+import { ItemPermission } from "./item-permission";
 
 /**
  * 
@@ -60,8 +63,11 @@ itemRouter.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
+// Authorization middleware
+itemRouter.use(checkJwt);
+
 // POST items
-itemRouter.post("/", async (req: Request, res: Response) => {
+itemRouter.post("/", checkPermissions(ItemPermission.CreateItems), async (req: Request, res: Response) => {
   try {
     const item: BaseItem = req.body;
     const newItem: Item = await ItemService.create(item);
@@ -77,7 +83,7 @@ itemRouter.post("/", async (req: Request, res: Response) => {
 });
 
 // PUT items/:id
-itemRouter.put("/:id", async (req: Request, res: Response) => {
+itemRouter.put("/:id", checkPermissions(ItemPermission.UpdateItems), async (req: Request, res: Response) => {
   const id: number = parseInt(req.params.id, 10);
 
   try {
@@ -89,7 +95,7 @@ itemRouter.put("/:id", async (req: Request, res: Response) => {
       const newItem = await ItemService.update(id, itemUpdate);
       res.status(200).json(newItem);
     }
-    
+
     const newItem = await ItemService.create(itemUpdate);
     res.status(201).json(newItem);
   } catch (e) {
@@ -102,7 +108,7 @@ itemRouter.put("/:id", async (req: Request, res: Response) => {
 });
 
 // DELETE items/:id
-itemRouter.delete("/:id", async (req: Request, res: Response) => {
+itemRouter.delete("/:id", checkPermissions(ItemPermission.DeleteItems), async (req: Request, res: Response) => {
   try {
     const id: number = parseInt(req.params.id, 10);
     await ItemService.remove(id);
@@ -112,7 +118,6 @@ itemRouter.delete("/:id", async (req: Request, res: Response) => {
     if (e instanceof Error) {
       res.status(500).send(e.message);
     }
-
 
     res.status(500).send(e);
   }
